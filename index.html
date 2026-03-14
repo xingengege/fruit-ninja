@@ -673,8 +673,8 @@
                 fruits.push({
                     x: Math.random() * (canvas.width - 200) + 100,
                     y: canvas.height + 50,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: -(level.speed + Math.random() * 2),
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: -(level.speed + Math.random() * 3 + 8),
                     rotation: 0,
                     rotationSpeed: (Math.random() - 0.5) * 0.1,
                     ...fruitType,
@@ -694,7 +694,7 @@
                 const fruit = fruits[i];
                 fruit.x += fruit.vx;
                 fruit.y += fruit.vy;
-                fruit.vy += 0.1; // 重力
+                fruit.vy += 0.05; // 减小重力，让水果飞得更高
                 fruit.rotation += fruit.rotationSpeed;
                 
                 // 检查是否掉出屏幕
