@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>蓝剑切水果</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            font-family: 'ZCOOL KuaiLe', cursive;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+        }
+        
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .score-panel {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 15px 25px;
+            color: #fff;
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .score-panel .label {
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .score-panel .value {
+            font-size: 32px;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        .level-panel {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            padding: 15px 25px;
+            color: #fff;
+            border: 2px solid #00ff88;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+        
+        .level-panel .label {
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .level-panel .value {
+            font-size: 28px;
+            color: #00ff88;
+        }
+        
+        .lives-panel {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .heart {
+            font-size: 28px;
+            filter: drop-shadow(0 0 5px red);
+        }
+        
+        .heart.lost {
+            opacity: 0.3;
+            filter: grayscale(1);
+        }
+        
+        #startScreen, #gameOverScreen, #levelCompleteScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        #startScreen h1 {
+            font-size: 60px;
+            color: #ffd700;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.4);
+            margin-bottom: 20px;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes titlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .subtitle {
+            font-size: 24px;
+            color: #00ff88;
+            margin-bottom: 40px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            border: none;
+            padding: 20px 60px;
+            font-size: 28px;
+            font-family: 'ZCOOL KuaiLe', cursive;
+            color: #1a1a2e;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 30px rgba(255, 215, 0, 0.5);
+        }
+        
+        .btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 40px rgba(255, 215, 0, 0.8);
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        #gameOverScreen h2 {
+            font-size: 50px;
+            color: #ff4444;
+            margin-bottom: 20px;
+        }
+        
+        #levelCompleteScreen h2 {
+            font-size: 50px;
+            color: #00ff88;
+            margin-bottom: 20px;
+        }
+        
+        .final-score {
+            font-size: 36px;
+            color: #fff;
+            margin-bottom: 30px;
+        }
+        
+        .instructions {
+            color: #aaa;
+            font-size: 18px;
+            margin-top: 30px;
+            text-align: center;
+            line-height: 1.8;
+        }
+        
+        .combo-text {
+            position: fixed;
+            font-size: 48px;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+            pointer-events: none;
+            z-index: 50;
+            animation: comboFade 0.8s ease-out forwards;
+        }
+        
+        @keyframes comboFade {
+            0% { transform: scale(0.5) translateY(0); opacity: 1; }
+            100% { transform: scale(1.2) translateY(-50px); opacity: 0; }
+        }
+        
+        .time-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #fff;
+        }
+        
+        .time-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #ffd700, #ff4444);
+            transition: width 0.1s linear;
+        }
+        
+        .target-score {
+            font-size: 18px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
+        .target-score span {
+            color: #ffd700;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div class="score-panel">
+            <div class="label">分数</div>
+            <div class="value" id="scoreDisplay">0</div>
+            <div class="target-score">目标: <span id="targetDisplay">100</span></div>
+        </div>
+        
+        <div class="level-panel">
+            <div class="label">关卡</div>
+            <div class="value" id="levelDisplay">1</div>
+            <div class="target-score">时间: <span id="timeDisplay">60</span>s</div>
+        </div>
+        
+        <div class="score-panel">
+            <div class="label">生命</div>
+            <div class="lives-panel" id="livesDisplay">
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="time-bar">
+        <div class="time-fill" id="timeFill"></div>
+    </div>
+    
+    <div id="startScreen">
+        <h1>🗡️ 蓝剑切水果</h1>
+        <div class="subtitle">Bladesword Fruit Ninja</div>
+        <button class="btn" id="startBtn">开始游戏</button>
+        <button class="btn" id="musicBtn">🎵 音乐: 开</button>
+        <div class="instructions">
+            <p>🎮 滑动屏幕切割水果</p>
+            <p>🍎 切水果得分，💣 炸弹扣分</p>
+            <p>⏱️ 每关60秒，达到目标分数过关</p>
+        </div>
+    </div>
+    
+    <div id="gameOverScreen" class="hidden">
+        <h2>游戏结束</h2>
+        <div class="final-score">最终分数: <span id="finalScore">0</span></div>
+        <button class="btn" id="restartBtn">重新开始</button>
+        <button class="btn" id="homeBtn">返回主页</button>
+    </div>
+    
+    <div id="levelCompleteScreen" class="hidden">
+        <h2>🎉 关卡完成!</h2>
+        <div class="final-score">得分: <span id="levelScore">0</span></div>
+        <button class="btn" id="nextLevelBtn">下一关</button>
+    </div>
+
+    <script>
+        // ============ 游戏配置 ============
+        const LEVELS = [
+            { speed: 3, maxFruits: 2, bombRate: 0.05, targetScore: 100 },
+            { speed: 3.5, maxFruits: 2, bombRate: 0.08, targetScore: 200 },
+            { speed: 4, maxFruits: 2, bombRate: 0.10, targetScore: 350 },
+            { speed: 4.5, maxFruits: 3, bombRate: 0.10, targetScore: 500 },
+            { speed: 5, maxFruits: 3, bombRate: 0.12, targetScore: 700 },
+            { speed: 5.5, maxFruits: 3, bombRate: 0.15, targetScore: 950 },
+            { speed: 6, maxFruits: 4, bombRate: 0.15, targetScore: 1250 },
+            { speed: 6.5, maxFruits: 4, bombRate: 0.18, targetScore: 1600 },
+            { speed: 7, maxFruits: 4, bombRate: 0.20, targetScore: 2000 },
+            { speed: 8, maxFruits: 5, bombRate: 0.25, targetScore: 2500 }
+        ];
+
+        const FRUITS = [
+            { emoji: '🍎', score: 10, size: 60 },
+            { emoji: '🍌', score: 10, size: 65 },
+            { emoji: '🍉', score: 15, size: 70 },
+            { emoji: '🍊', score: 10, size: 55 },
+            { emoji: '🍇', score: 20, size: 45 },
+            { emoji: '🍓', score: 25, size: 40 }
+        ];
+
+        // ============ 游戏状态 ============
+        let canvas, ctx;
+        let score = 0;
+        let lives = 3;
+        let currentLevel = 1;
+        let gameTime = 60;
+        let gameRunning = false;
+        let musicEnabled = true;
+        let audioContext;
+        let bgmOscillator;
+        let bgmGain;
+
+        let fruits = [];
+        let particles = [];
+        let trails = [];
+        let slicedFruits = [];
+        
+        let touchStart = null;
+        let lastTouch = null;
+        let comboCount = 0;
+        let comboTimer = null;
+
+        // ============ 音频系统 ============
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(type) {
+            if (!audioContext || !musicEnabled) return;
+            
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            switch(type) {
+                case 'slice':
+                    osc.frequency.setValueAtTime(800, audioContext.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(audioContext.currentTime + 0.1);
+                    break;
+                case 'bomb':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, audioContext.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(30, audioContext.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioContext.currentTime + 0.3);
+                    break;
+                case 'combo':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523, audioContext.currentTime);
+                    osc.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(784, audioContext.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioContext.currentTime + 0.3);
+                    break;
+                case 'levelComplete':
+                    osc.type = 'sine';
+                    const notes = [523, 659, 784, 1047];
+                    notes.forEach((freq, i) => {
+                        const osc2 = audioContext.createOscillator();
+                        const gain2 = audioContext.createGain();
+                        osc2.connect(gain2);
+                        gain2.connect(audioContext.destination);
+                        osc2.frequency.value = freq;
+                        gain2.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.15);
+                        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.15 + 0.3);
+                        osc2.start(audioContext.currentTime + i * 0.15);
+                        osc2.stop(audioContext.currentTime + i * 0.15 + 0.3);
+                    });
+                    break;
+            }
+        }
+
+        function startBGM() {
+            if (!audioContext || !musicEnabled) return;
+            
+            bgmGain = audioContext.createGain();
+            bgmGain.connect(audioContext.destination);
+            bgmGain.gain.value = 0.05;
+
+            function playNote() {
+                if (!gameRunning || !musicEnabled) return;
+                
+                const osc = audioContext.createOscillator();
+                const noteGain = audioContext.createGain();
+                osc.connect(noteGain);
+                noteGain.connect(bgmGain);
+                
+                const notes = [261, 293, 329, 349, 392, 440, 493, 523];
+                const note = notes[Math.floor(Math.random() * notes.length)];
+                
+                osc.frequency.value = note;
+                osc.type = 'sine';
+                noteGain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                noteGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                osc.start();
+                osc.stop(audioContext.currentTime + 0.3);
+                
+                setTimeout(playNote, 200 + Math.random() * 300);
+            }
+            
+            playNote();
+        }
+
+        function stopBGM() {
+            if (bgmGain) {
+                bgmGain.disconnect();
+            }
+        }
+
+        // ============ 游戏初始化 ============
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 触屏事件
+            canvas.addEventListener('touchstart', handleTouchStart);
+            canvas.addEventListener('touchmove', handleTouchMove);
+            canvas.addEventListener('touchend', handleTouchEnd);
+            
+            // 鼠标事件（桌面备用）
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            
+            // 按钮事件
+            document.getElementById('startBtn').addEventListener('click', startGame);
+            document.getElementById('restartBtn').addEventListener('click', restartGame);
+            document.getElementById('homeBtn').addEventListener('click', goHome);
+            document.getElementById('nextLevelBtn').addEventListener('click', nextLevel);
+            document.getElementById('musicBtn').addEventListener('click', toggleMusic);
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // ============ 触屏/鼠标处理 ============
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            touchStart = { x: touch.clientX, y: touch.clientY };
+            lastTouch = { x: touch.clientX, y: touch.clientY };
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!touchStart || !gameRunning) return;
+            
+            const touch = e.touches[0];
+            const current = { x: touch.clientX, y: touch.clientY };
+            
+            trails.push({
+                x: current.x,
+                y: current.y,
+                life: 1
+            });
+            
+            checkSlice(lastTouch, current);
+            lastTouch = current;
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            touchStart = null;
+            lastTouch = null;
+        }
+
+        function handleMouseDown(e) {
+            touchStart = { x: e.clientX, y: e.clientY };
+            lastTouch = { x: e.clientX, y: e.clientY };
+        }
+
+        function handleMouseMove(e) {
+            if (!touchStart || !gameRunning) return;
+            
+            const current = { x: e.clientX, y: e.clientY };
+            
+            trails.push({
+                x: current.x,
+                y: current.y,
+                life: 1
+            });
+            
+            checkSlice(lastTouch, current);
+            lastTouch = current;
+        }
+
+        function handleMouseUp(e) {
+            touchStart = null;
+            lastTouch = null;
+        }
+
+        // ============ 切割检测 ============
+        function checkSlice(from, to) {
+            const level = LEVELS[currentLevel - 1];
+            
+            for (let i = fruits.length - 1; i >= 0; i--) {
+                const fruit = fruits[i];
+                if (fruit.sliced) continue;
+                
+                const dx = fruit.x - from.x;
+                const dy = fruit.y - from.y;
+                const dx2 = fruit.x - to.x;
+                const dy2 = fruit.y - to.y;
+                
+                const dist = Math.abs(dx * (to.y - from.y) - dy * (to.x - from.x)) / 
+                             Math.sqrt(Math.pow(to.y - from.y, 2) + Math.pow(to.x - from.x, 2));
+                
+                if (dist < fruit.size / 2) {
+                    if (fruit.isBomb) {
+                        // 切到炸弹
+                        score -= 50;
+                        lives--;
+                        playSound('bomb');
+                        createExplosion(fruit.x, fruit.y);
+                        fruits.splice(i, 1);
+                        updateUI();
+                        
+                        if (lives <= 0) {
+                            gameOver();
+                        }
+                    } else {
+                        // 切到水果
+                        fruit.sliced = true;
+                        const points = fruit.score * getComboMultiplier();
+                        score += points;
+                        playSound('slice');
+                        
+                        // 创建切割效果
+                        createSlicedFruit(fruit);
+                        createParticles(fruit.x, fruit.y, fruit.color);
+                        
+                        // Combo 检测
+                        comboCount++;
+                        clearTimeout(comboTimer);
+                        comboTimer = setTimeout(() => {
+                            if (comboCount >= 2) {
+                                showComboText(comboCount);
+                                playSound('combo');
+                            }
+                            comboCount = 0;
+                        }, 300);
+                        
+                        fruits.splice(i, 1);
+                        updateUI();
+                    }
+                }
+            }
+        }
+
+        function getComboMultiplier() {
+            if (comboCount >= 5) return 3;
+            if (comboCount >= 3) return 2;
+            if (comboCount >= 2) return 1.5;
+            return 1;
+        }
+
+        function showComboText(count) {
+            const text = document.createElement('div');
+            text.className = 'combo-text';
+            text.textContent = `${count}连击! x${getComboMultiplier()}`;
+            text.style.left = Math.random() * 40 + 30 + '%';
+            text.style.top = Math.random() * 30 + 20 + '%';
+            document.body.appendChild(text);
+            setTimeout(() => text.remove(), 800);
+        }
+
+        // ============ 视觉效果 ============
+        function createSlicedFruit(fruit) {
+            const colors = {
+                '🍎': '#ff4444',
+                '🍌': '#ffd700',
+                '🍉': '#ff6b6b',
+                '🍊': '#ffaa00',
+                '🍇': '#9966ff',
+                '🍓': '#ff6688'
+            };
+            
+            for (let i = 0; i < 2; i++) {
+                slicedFruits.push({
+                    x: fruit.x,
+                    y: fruit.y,
+                    vx: (i === 0 ? -1 : 1) * 3,
+                    vy: -3 - Math.random() * 2,
+                    rotation: 0,
+                    rotationSpeed: (i === 0 ? -1 : 1) * 0.2,
+                    emoji: fruit.emoji,
+                    size: fruit.size,
+                    half: i,
+                    color: colors[fruit.emoji] || '#fff'
+                });
+            }
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 4;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    size: 3 + Math.random() * 5,
+                    color: color
+                });
+            }
+        }
+
+        function createExplosion(x, y) {
+            for (let i = 0; i < 30; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 3 + Math.random() * 6;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    size: 5 + Math.random() * 10,
+                    color: Math.random() > 0.5 ? '#ff4444' : '#ff8800'
+                });
+            }
+        }
+
+        // ============ 游戏逻辑 ============
+        function spawnFruit() {
+            if (!gameRunning) return;
+            
+            const level = LEVELS[currentLevel - 1];
+            const maxFruits = level.maxFruits;
+            
+            if (fruits.length < maxFruits) {
+                const isBomb = Math.random() < level.bombRate;
+                const fruitType = isBomb ? 
+                    { emoji: '💣', score: -50, size: 55 } : 
+                    FRUITS[Math.floor(Math.random() * FRUITS.length)];
+                
+                fruits.push({
+                    x: Math.random() * (canvas.width - 200) + 100,
+                    y: canvas.height + 50,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: -(level.speed + Math.random() * 2),
+                    rotation: 0,
+                    rotationSpeed: (Math.random() - 0.5) * 0.1,
+                    ...fruitType,
+                    isBomb: isBomb,
+                    sliced: false
+                });
+            }
+            
+            setTimeout(spawnFruit, 500 + Math.random() * 1000);
+        }
+
+        function update() {
+            if (!gameRunning) return;
+            
+            // 更新水果
+            for (let i = fruits.length - 1; i >= 0; i--) {
+                const fruit = fruits[i];
+                fruit.x += fruit.vx;
+                fruit.y += fruit.vy;
+                fruit.vy += 0.1; // 重力
+                fruit.rotation += fruit.rotationSpeed;
+                
+                // 检查是否掉出屏幕
+                if (fruit.y > canvas.height + 100) {
+                    if (!fruit.isBomb && !fruit.sliced) {
+                        lives--;
+                        updateUI();
+                        if (lives <= 0) {
+                            gameOver();
+                        }
+                    }
+                    fruits.splice(i, 1);
+                }
+            }
+            
+            // 更新切割后的水果
+            for (let i = slicedFruits.length - 1; i >= 0; i--) {
+                const sf = slicedFruits[i];
+                sf.x += sf.vx;
+                sf.y += sf.vy;
+                sf.vy += 0.2;
+                sf.rotation += sf.rotationSpeed;
+                
+                if (sf.y > canvas.height + 100) {
+                    slicedFruits.splice(i, 1);
+                }
+            }
+            
+            // 更新粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.1;
+                p.life -= 0.02;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            // 更新轨迹
+            for (let i = trails.length - 1; i >= 0; i--) {
+                trails[i].life -= 0.1;
+                if (trails[i].life <= 0) {
+                    trails.splice(i, 1);
+                }
+            }
+            
+            // 更新计时
+            gameTime -= 1/60;
+            if (gameTime <= 0) {
+                checkLevelComplete();
+            }
+            updateUI();
+        }
+
+        function render() {
+            // 绘制背景
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制轨迹
+            if (trails.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(trails[0].x, trails[0].y);
+                for (let i = 1; i < trails.length; i++) {
+                    ctx.lineTo(trails[i].x, trails[i].y);
+                }
+                ctx.strokeStyle = `rgba(255, 215, 0, ${trails[trails.length-1].life})`;
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+            
+            // 绘制水果
+            ctx.font = '48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            for (const fruit of fruits) {
+                ctx.save();
+                ctx.translate(fruit.x, fruit.y);
+                ctx.rotate(fruit.rotation);
+                ctx.font = `${fruit.size}px Arial`;
+                ctx.fillText(fruit.emoji, 0, 0);
+                ctx.restore();
+            }
+            
+            // 绘制切割后的水果
+            for (const sf of slicedFruits) {
+                ctx.save();
+                ctx.translate(sf.x, sf.y);
+                ctx.rotate(sf.rotation);
+                ctx.font = `${sf.size}px Arial`;
+                
+                if (sf.half === 0) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(-sf.size, -sf.size, sf.size, sf.size * 2);
+                    ctx.clip();
+                    ctx.fillText(sf.emoji, 0, 0);
+                    ctx.restore();
+                } else {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(0, -sf.size, sf.size, sf.size * 2);
+                    ctx.clip();
+                    ctx.fillText(sf.emoji, 0, 0);
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+            
+            // 绘制粒子
+            for (const p of particles) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ============ 游戏控制 ============
+        function startGame() {
+            initAudio();
+            score = 0;
+            lives = 3;
+            currentLevel = 1;
+            gameTime = 60;
+            fruits = [];
+            particles = [];
+            trails = [];
+            slicedFruits = [];
+            
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('levelCompleteScreen').classList.add('hidden');
+            
+            gameRunning = true;
+            updateUI();
+            spawnFruit();
+            startBGM();
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function goHome() {
+            gameRunning = false;
+            stopBGM();
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('levelCompleteScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        function nextLevel() {
+            currentLevel++;
+            gameTime = 60;
+            fruits = [];
+            particles = [];
+            trails = [];
+            slicedFruits = [];
+            
+            document.getElementById('levelCompleteScreen').classList.add('hidden');
+            gameRunning = true;
+            updateUI();
+            spawnFruit();
+        }
+
+        function checkLevelComplete() {
+            gameRunning = false;
+            stopBGM();
+            
+            const level = LEVELS[currentLevel - 1];
+            
+            if (score >= level.targetScore) {
+                if (currentLevel >= 10) {
+                    // 通关
+                    document.getElementById('finalScore').textContent = score;
+                    document.getElementById('gameOverScreen').classList.remove('hidden');
+                } else {
+                    // 过关
+                    playSound('levelComplete');
+                    document.getElementById('levelScore').textContent = score;
+                    document.getElementById('levelCompleteScreen').classList.remove('hidden');
+                }
+            } else {
+                // 未达标
+                document.getElementById('finalScore').textContent = score;
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            stopBGM();
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+
+        function updateUI() {
+            document.getElementById('scoreDisplay').textContent = score;
+            document.getElementById('levelDisplay').textContent = currentLevel;
+            document.getElementById('timeDisplay').textContent = Math.ceil(gameTime);
+            document.getElementById('targetDisplay').textContent = LEVELS[currentLevel - 1].targetScore;
+            
+            // 更新生命显示
+            const hearts = document.querySelectorAll('.heart');
+            hearts.forEach((heart, i) => {
+                heart.classList.toggle('lost', i >= lives);
+            });
+            
+            // 更新时间条
+            const timeFill = document.getElementById('timeFill');
+            timeFill.style.width = (gameTime / 60 * 100) + '%';
+        }
+
+        function toggleMusic() {
+            musicEnabled = !musicEnabled;
+            document.getElementById('musicBtn').textContent = musicEnabled ? '🎵 音乐: 开' : '🎵 音乐: 关';
+            
+            if (!musicEnabled) {
+                stopBGM();
+            } else if (gameRunning) {
+                startBGM();
+            }
+        }
+
+        // 启动游戏
+        window.onload = init;
+    </script>
+</body>
+</html>
